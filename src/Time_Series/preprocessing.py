@@ -13,3 +13,8 @@ def build_transition_mask(labels, fs_lbl, margin_s=30):
         a, b = max(0, i - m), min(len(labels), i + m)
         mask[a:b] = True
     return mask
+
+def overlap_with_mask(t0_s, t1_s, mask, fs_lbl):
+    i0, i1 = int(t0_s * fs_lbl), int(t1_s * fs_lbl)
+    i1 = min(i1, len(mask))
+    return mask[i0:i1].any()
