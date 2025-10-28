@@ -17,19 +17,36 @@ def majority_label_for_interval(lbl_700hz, fs_lbl, t0_s, t1_s, valid=(1,2,3,4)):
     return int(vals[np.argmax(cnt)])
 
 def make_ppg_windows_for_subject(d: dict, cfg) -> Tuple[List[np.ndarray], List[int], int]:
-    ppg = d["signal"]["wrist"]["BVP"].astype(np.float32)
-    fs_bvp = int(d["fs"]["wrist"]["BVP"])          # 64
+    """
+    Build (filtered) PPG windows + labels for one subject.
+    Robust to very short signals that would otherwise break sosfiltfilt.
+    """
+    ppg   = d["signal"]["wrist"]["BVP"].astype(np.float32)
+    fs_bvp = 64       # 64
     labels = d["label"].astype(int)                # ~700 Hz
-    fs_lbl = int(d["fs"]["chest"]["ACC"])          # 700
+    fs_lbl = 700       # 700
 
-    # filter continuous signal first
+    # Optional: identify subject for clearer warnings (if present)
+    subj = d.get("subject", "unknown")
+
+    # ---- Guard: extremely short signals ----
+    # Using the same threshold logic as preprocessing (padlen≈27 for your filter)
+    if ppg.size == 0:
+        print(f"[WARN] Skipping subject {subj}: empty PPG.")
+        return [], [], fs_bvp
+    if ppg.size <= 27:
+        print(f"[WARN] Skipping subject {subj}: PPG too short ({ppg.size} samples ≤ 27).")
+        return [], [], fs_bvp
+
+    # ---- 1) Filter the entire sequence (robust function handles short arrays) ----
     lo, hi = cfg.ppg_band
     ppg_f = butter_bandpass(ppg, fs_bvp, lo, hi)
 
-    # transition mask
+    # ---- 2) Build transition mask ----
     mask = build_transition_mask(labels, fs_lbl, cfg.transition_margin_s)
 
-    win = int(cfg.win_s * fs_bvp)
+    # ---- 3) Windowing & labeling ----
+    win  = int(cfg.win_s  * fs_bvp)
     step = int(cfg.step_s * fs_bvp)
 
     X, Y = [], []
@@ -38,8 +55,9 @@ def make_ppg_windows_for_subject(d: dict, cfg) -> Tuple[List[np.ndarray], List[i
         if overlap_with_mask(t0, t1, mask, fs_lbl):
             continue
         lab = majority_label_for_interval(labels, fs_lbl, t0, t1, cfg.classes_kept)
-        if lab == -1: continue
-        y = cfg.label_map4[lab]
+        if lab == -1:
+            continue
         X.append(ppg_f[s:s+win])
-        Y.append(y)
+        Y.append(cfg.label_map4[lab])
+
     return X, Y, fs_bvp
