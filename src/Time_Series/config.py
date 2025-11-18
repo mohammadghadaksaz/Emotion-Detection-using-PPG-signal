@@ -32,7 +32,7 @@ def set_seed(seed: int = 42):
 
 @dataclass
 class CFG:
-    data_dir: str = "/dataset"   # folder with S*/S*.pkl or S*.pkl
+    data_dir: str = "./dataset"   # folder with S*/S*.pkl or S*.pkl
     win_s: int = 60
     step_s: int = 30
     ppg_band: tuple = (0.5, 8.0)  # Hz
