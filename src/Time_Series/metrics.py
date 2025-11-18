@@ -1,12 +1,15 @@
 import numpy as np
 
-def confusion_matrix(pred, true, k):
+# %% 8) Metrics (macro-F1)
+def confusion_matrix_np(pred, true, k):
     m = np.zeros((k,k), dtype=int)
-    for p,t in zip(pred, true): m[t, p] += 1
+    for p, t in zip(pred, true):
+        m[t, p] += 1
     return m
 
-def f1_macro(pred, true, k):
-    cm = confusion_matrix(pred, true, k)
+
+def f1_macro_np(pred, true, k):
+    cm = confusion_matrix_np(pred, true, k)
     f1s = []
     for c in range(k):
         tp = cm[c,c]
@@ -14,6 +17,5 @@ def f1_macro(pred, true, k):
         fn = cm[c,:].sum() - tp
         prec = tp / (tp + fp + 1e-12)
         rec  = tp / (tp + fn + 1e-12)
-        f1 = 2*prec*rec / (prec+rec+1e-12)
-        f1s.append(f1)
+        f1s.append(2*prec*rec / (prec+rec+1e-12))
     return float(np.mean(f1s)), cm
